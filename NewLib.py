@@ -6,6 +6,12 @@ from bs4 import BeautifulSoup
 import datetime
 from os import path
 import csv
+import pandas as pd
+from ReportClass import *
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
 
 logging.basicConfig(filename="logs.log", level=logging.INFO)
 
@@ -244,7 +250,56 @@ def create_csv_file_of_deal_MT4():
                     write_to_csv(deal_list, ConfigFile.getParam('file path for scv files','file path') + csv_name)
                     # write_to_csv(deal_list, SetGetConfig('get', self.csv_name)
 
+def get_mult_table(list_of_files):
+    # делаем суммарную таблицу для подсчета объема лотов в моменте
+    '''
+    input: список gentq afqkjd - для формирования суммарного
+    return pandas table
+    '''
+    if isinstance(list_of_files, list) == False:  # если это не список возвращвем 0
+        return 0
+    mult_table = pd.DataFrame()  # таблица суммы лотов
+    dic = {'date': 0} #  для формирования пандас таблицы
+    for single_repotr_path in list_of_files:
+        report_ = Report(single_repotr_path)
+        single_table = report_.deals_list()
+        new_name_sym = report_.pathToFile.split('/')[-1].split('.')[0] + '(' + report_.symbol + ')'
+        single_table = single_table.drop(columns=['commisions', 'direction', 'num_order', 'num_order', 'price',
+                                                  'symbol', 'sl', 'tp', 'balance'])
+        dic[new_name_sym] = 0
+        open_position = ('buy', 'sell')
+        # посчитаем лотность по этому отчету
+        lot = 0
+        for item in single_table.itertuples():
+            k = -1
+            if item[2] in open_position:
+                k = 1
+            lot = lot + k * round(float(item[1]), 2)
+            dic[new_name_sym] = abs(lot)
+            dic['date'] = item[4]
+            mult_table = mult_table.append(dic, ignore_index=True)
+    mult_table = mult_table.sort_values(by='date', inplace=False)
+    mult_table = mult_table.fillna(0)
+    return mult_table
 
+        # sym = single_table.columns[9]
+        # new_name_sym = report_.symbol + report_.pathToFile.split('/')[-1].split('.')[0]
+        # new_name_lot = 'Lot_' + report_.pathToFile.split('/')[-1].split('.')[0]
+        # new_name_order_type = 'OrderType_' + report_.pathToFile.split('/')[-1].split('.')[0]
+        # single_table = single_table.drop(columns=['commisions', 'direction', 'num_order', 'num_order', 'price',
+        #                                           'profit', 'sl', 'tp', 'balance'])
+        # single_table.rename(columns={'lot': new_name_lot}, inplace=True)
+        # single_table.rename(columns={'order_type': new_name_order_type}, inplace=True)
+        # # заменяем столбес с символом на имя файла отчета
+        # single_table['symbol'] = single_table['symbol'].str.replace(report_.symbol, new_name_sym)
+        # mult_table = mult_table.append(single_table, ignore_index=True) #  получили таблицу сделок по отчету
+
+class MplCanvas(FigureCanvasQTAgg):
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super(MplCanvas, self).__init__(fig)
 
 
 

@@ -8,6 +8,12 @@ from NewLib import *
 from ReportClass import *
 from PyQt5.QtGui import QPixmap
 
+import matplotlib.pyplot as plt
+import numpy as np
+import plotly.graph_objects as go
+import datetime
+import plotly
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -420,37 +426,43 @@ class TableTab(QWidget):
 class LotsAnalyse(QWidget):
     def __init__(self):
         super().__init__()
+
         vbox = QVBoxLayout()
         self.btn = QPushButton('MultRaport')
-        self.btn.clicked.connect(self.sum_list)
-        self.btn.clicked.connect(self.get_mult_report)
+        self.graph = MplCanvas(self, width=5, height=4, dpi=100)
+
+        self.btn.clicked.connect(self.pandas_table_for_graph)
+        self.btn.clicked.connect(lambda : vbox.addWidget(self.graph))
 
         vbox.addWidget(self.btn)
+        vbox.addWidget(self.graph)
         self.setLayout(vbox)
-# todo нужно получить список всех добавленных отчетов
-    def sum_list(self):
-        global sum_list
-        print(sum_list)
 
-    def get_mult_report(self):
+    # def sum_list(self):
+    #     list_os_tables = self.get_mult_report()
+    #     if len(list_os_tables) == 0:
+    #         return 0
+    #     fig = go.Figure()
+    #     for table in list_os_tables:
+    #         y = table['lots'].tolist()
+    #         x = table['date'].tolist()  # '2021.08.09 08:25'
+    #         time_list = [datetime.datetime.strptime(time_str, '%Y.%m.%d %H:%M') for time_str in x]
+    #         fig.add_trace(go.Scatter(x=table[time_list], y=table['lots'], name='qwerty'))
+    #     fig.show()
+
+    def pandas_table_for_graph(self):
+        # подготавливаем пандас таблицу что бы по ней построить графики лотности
         global sum_list
+        # если список файлов пустой то ничего не делаем
         if len(sum_list) == 0:
             QMessageBox.question(self, '!!!Внимание!!!', "Добавте файлы\n отчета!!!", QMessageBox.Ok)
             return 0
-        mult_table = pd.DataFrame()
-        for single_repotr_path in sum_list:
-            report_ = Report(single_repotr_path)
-            single_table = report_.deals_list()
-            sym = single_table.columns[9]
-            new_name_sym = report_.pathToFile.split('/')[-1].split('.')[0]
-            single_table.rename(columns={sym:new_name_sym}, inplace=True)
-            single_table = single_table.drop(columns=['commisions', 'direction', 'num_order', 'num_order', 'price',
-                                                      'profit', 'sl', 'tp'])
-            single_table.loc[new_name_sym] = new_name_sym
-            print(single_table.columns)
-            print(single_table)
-
-
+        mult_table = get_mult_table(sum_list)
+        headers = mult_table.columns.tolist()
+        headers.remove('date') #  список заголовков без столбца с датой
+        for rep in headers:
+            mult_table.plot(x='date', y=rep, ax=self.graph.axes)
+        return self.graph
 
 
 class WorkWithSets(QWidget):
