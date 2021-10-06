@@ -79,7 +79,7 @@ def createConfig(filepath):
     функция задает настройки по умолчанию и создает файл настройки, если его не существует
     """
     config = configparser.ConfigParser()
-
+# todo редусмотреть возможность создать папку config если она отсутствует
     config.add_section("Main windos sizes")
     config.set("Main windos sizes", "Top", "200")
     config.set("Main windos sizes", "Left", "200")

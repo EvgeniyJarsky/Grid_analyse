@@ -13,6 +13,7 @@ import numpy as np
 import plotly.graph_objects as go
 import datetime
 import plotly
+from matplotlib.backends.backend_qt5agg import FigureCanvas
 
 
 class MainWindow(QMainWindow):
@@ -169,14 +170,17 @@ class MainWindow(QMainWindow):
 
         self.profitability_value.setText(report.profitability)
 
-    def get_list_of_listview(self):
+    def get_list_of_listview(self, full_name):
         # получаем список файлов уже добавленных файлов отчетов
         this_reports_was_added = []
         num_of_items = self.listView.count()
         for item in range(num_of_items):
             base_path = self.listView.item(item).text()
-            only_file_name = base_path.split('/')[-1]
-            this_reports_was_added.append(only_file_name)
+            if full_name:
+                rez_name = base_path
+            else:
+                rez_name = base_path.split('/')[-1]
+            this_reports_was_added.append(rez_name)
         return this_reports_was_added
 
     def show_dialog(self):
@@ -200,7 +204,7 @@ class MainWindow(QMainWindow):
         # todo need to check valid file
         # проверка на одинаковые имена файлов при добавлении нового
         only_file_name = file.split('/')[-1]
-        if only_file_name in self.get_list_of_listview():
+        if only_file_name in self.get_list_of_listview(False):
             QMessageBox.question(self, '!!!Внимание!!!', "Файл с таким именем уже добавлен!!!", QMessageBox.Ok)
             return 0
         self.listView.addItem(file)
@@ -238,7 +242,7 @@ class MainWindow(QMainWindow):
         for item in list_items:
             self.listView.takeItem(self.listView.row(item))
         global sum_list
-        sum_list = self.get_list_of_listview()
+        sum_list = self.get_list_of_listview(True)
 
     def closeEvent(self, event):
         # функция выполняется призакрытии программы
@@ -431,12 +435,18 @@ class LotsAnalyse(QWidget):
         self.btn = QPushButton('MultRaport')
         self.graph = MplCanvas(self, width=5, height=4, dpi=100)
 
-        self.btn.clicked.connect(self.pandas_table_for_graph)
-        self.btn.clicked.connect(lambda : vbox.addWidget(self.graph))
+
+
+        layout = QtWidgets.QHBoxLayout()
+
+        self.btn.clicked.connect(self.draw_graph)
 
         vbox.addWidget(self.btn)
         vbox.addWidget(self.graph)
-        self.setLayout(vbox)
+
+        layout.addLayout(vbox)
+
+        self.setLayout(layout)
 
     # def sum_list(self):
     #     list_os_tables = self.get_mult_report()
@@ -458,12 +468,17 @@ class LotsAnalyse(QWidget):
             QMessageBox.question(self, '!!!Внимание!!!', "Добавте файлы\n отчета!!!", QMessageBox.Ok)
             return 0
         mult_table = get_mult_table(sum_list)
-        headers = mult_table.columns.tolist()
-        headers.remove('date') #  список заголовков без столбца с датой
-        for rep in headers:
-            mult_table.plot(x='date', y=rep, ax=self.graph.axes)
-        return self.graph
+        return mult_table
 
+    def draw_graph(self):
+        self.graph.axes.cla()
+        mult_table = self.pandas_table_for_graph()
+        if isinstance(mult_table, pd.DataFrame):
+            headers = mult_table.columns.tolist()
+            headers.remove('date')  # список заголовков без столбца с датой
+            for rep in headers:
+                mult_table.plot(x='date', y=rep, ax=self.graph.axes)
+            self.graph.draw()
 
 class WorkWithSets(QWidget):
     def __init__(self):
