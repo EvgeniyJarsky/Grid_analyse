@@ -13,7 +13,6 @@ import numpy as np
 import plotly.graph_objects as go
 import datetime
 import plotly
-from matplotlib.backends.backend_qt5agg import FigureCanvas
 
 
 class MainWindow(QMainWindow):
@@ -479,6 +478,16 @@ class LotsAnalyse(QWidget):
             for rep in headers:
                 mult_table.plot(x='date', y=rep, ax=self.graph.axes)
             self.graph.draw()
+        buttonAsk = QMessageBox.question(self, 'Внимание', "Построить интерактивный\n график?", QMessageBox.Yes,
+                                         QMessageBox.No)
+        if buttonAsk == QMessageBox.Yes:
+            data = []
+            for rep in headers:
+                a = mult_table['date']
+                b = mult_table[rep]
+                graf = go.Scatter(x=mult_table['date'], y=mult_table[rep], name=rep)
+                data.append(graf)
+            plotly.offline.plot(data)
 
 class WorkWithSets(QWidget):
     def __init__(self):
