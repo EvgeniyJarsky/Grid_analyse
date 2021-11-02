@@ -8,7 +8,7 @@ import numpy as np
 
 
 def string_to_time(time):
-    # :param time: string 2015.02.16 19:59:58
+    # :param time: string 2015.02.16 19:59
     # :return: type datatime  2015-02-16 19:59:58
     year = int(time[0:4])
     month = int(time[5:7])
@@ -17,7 +17,6 @@ def string_to_time(time):
     minut = int(time[14:16])
     sec = int(time[-2:])
     time = datetime.datetime(year, month, day, hour, minut, sec)
-    # print(year + month + day + hour + minut + sec)
     return time
 
 
@@ -908,46 +907,46 @@ class Report:
         print(f'Объект {self.pathToFile} удален!!!')
 
 
-if __name__ == "__main__":
-    a = Report(
-        'E:\CLOUD_MEGA\!Роботы\!!СЕТКА_1_43\!Сеты\GBPCAD\(EA) - Setka v1.43-ADX-IMP-191224-R285-SR7 Ostap.Bender GBPCAD LS v2,53 2012-2019\MyTDS\Dukas(100-400)ms1spread.htm')
-    a.deals_list()
-    # print(a.table)
-
-    tabl = a.table
-
-    grid_table = a.get_grid_list()
-    print(grid_table)
-    maxgrid = a.get_max_grid_num()
-    digits = a.get_digits()
-    a.create_final_table1()
-    print('table 1 created')
-    del a
-
-'''
-0-balance
-1-commisions
-2- direction
-3 - lot
-4- num_order
-5 buy/sell
-6- price
-7-profit
-8-sl
-9-symbol
-10-time
-11-tp
-
-balance                      0
-commisions                   0
-direction            direction
-lot                       0.01
-num_order                    1
-order_type                sell
-price                  1.71946
-profit                        
-sl                     0.00000
-symbol                 GBPCAD 
-time          2020.01.24 20:35
-tp                     0.00000
-'''
+# if __name__ == "__main__":
+#     a = Report(
+#         'E:\CLOUD_MEGA\!Роботы\!!СЕТКА_1_43\!Сеты\GBPCAD\(EA) - Setka v1.43-ADX-IMP-191224-R285-SR7 Ostap.Bender GBPCAD LS v2,53 2012-2019\MyTDS\Dukas(100-400)ms1spread.htm')
+#     a.deals_list()
+#     # print(a.table)
+#
+#     tabl = a.table
+#
+#     grid_table = a.get_grid_list()
+#     print(grid_table)
+#     maxgrid = a.get_max_grid_num()
+#     digits = a.get_digits()
+#     a.create_final_table1()
+#     print('table 1 created')
+#     del a
+#
+# '''
+# 0-balance
+# 1-commisions
+# 2- direction
+# 3 - lot
+# 4- num_order
+# 5 buy/sell
+# 6- price
+# 7-profit
+# 8-sl
+# 9-symbol
+# 10-time
+# 11-tp
+#
+# balance                      0
+# commisions                   0
+# direction            direction
+# lot                       0.01
+# num_order                    1
+# order_type                sell
+# price                  1.71946
+# profit
+# sl                     0.00000
+# symbol                 GBPCAD
+# time          2020.01.24 20:35
+# tp                     0.00000
+# '''

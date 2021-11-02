@@ -1,23 +1,24 @@
 import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QHBoxLayout, \
-    QVBoxLayout, QPushButton, QGridLayout, QLabel, QListView, QFrame, QSplitter, \
+    QVBoxLayout, QPushButton, QGridLayout, QLabel, QFrame, QSplitter, \
     QTabWidget, QTableWidget, QFileDialog, QListWidget, QMessageBox, QTableWidgetItem, QTextEdit
-from PyQt5 import QtGui, QtWidgets, QtCore
-from NewLib import *
+from PyQt5 import QtWidgets, QtCore
+from libraries import *
 from ReportClass import *
+from db_work import *
 from PyQt5.QtGui import QPixmap
 
-import matplotlib.pyplot as plt
-import numpy as np
 import plotly.graph_objects as go
-import datetime
 import plotly
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # Очистим базу данных перед запуском
+        clear_db(path_to_db, "list")
 
         self.sum_list = 0  # список всех добавленных отчетов
 
@@ -149,9 +150,13 @@ class MainWindow(QMainWindow):
 
     def show_selected_line(self):
         # при выборе файла сета в окне - справа выводиться информация об отчете
-        global report
         path_to_file = self.listView.currentItem().text()  # возвращает текущую строку
-        report = Report(path_to_file)
+
+        #Пометим в БД выбранный файл
+        mark_selected("database.db", path_to_file)
+
+        # report = Report(path_to_file)
+        report = Report(get_selected("database.db"))
 
         self.set_name_value.setText(report.fileName)
 
@@ -201,14 +206,19 @@ class MainWindow(QMainWindow):
         except:
             print('Ошибка сохранения файла, путь содержит русский шрифт')
         # todo need to check valid file
+
         # проверка на одинаковые имена файлов при добавлении нового
         only_file_name = file.split('/')[-1]
         if only_file_name in self.get_list_of_listview(False):
             QMessageBox.question(self, '!!!Внимание!!!', "Файл с таким именем уже добавлен!!!", QMessageBox.Ok)
             return 0
+
+        # Добавим открытый файл в БД
+        # todo тут надо путь к БД брать из config - пока явно прописал
+        insert_data("database.db", "list", file, 0)
+
         self.listView.addItem(file)
-        global sum_list
-        sum_list.append(file)  # суммарный список всех добавленных точетов для анализа лотности
+
 
     def clear_labels(self):
         # Очищаем данные Label и глобальные переменные
@@ -221,14 +231,8 @@ class MainWindow(QMainWindow):
         self.profit_value.setText('---')
         self.max_down_value.setText('---')
         self.profitability_value.setText('---')
-        global report, sum_list
-        sum_list = []
-        # если удаляется подряд несколько отчетов то уже при удалении первого отчета report удален,
-        # и потом del report выдает ошибку
-        try:
-            del report
-        except:
-            pass
+        clear_db("database.db", "list")
+
 
     def delete_item(self):
         # функция удаляет выбранный    отчет
@@ -240,20 +244,15 @@ class MainWindow(QMainWindow):
         self.clear_labels()
         for item in list_items:
             self.listView.takeItem(self.listView.row(item))
-        global sum_list
-        sum_list = self.get_list_of_listview(True)
+        delete_selected("database.db", "list")
 
     def closeEvent(self, event):
         # функция выполняется призакрытии программы
         reply = QtWidgets.QMessageBox.question(self, 'Внимание', 'Вы уверены что хотите выйти?',
                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
         if reply == QtWidgets.QMessageBox.Yes:
-            # delete report
-            global report
-            try:
-                del report
-            except:
-                pass
+            # clear db
+            clear_db("database.db", "list")
             # detect window size
             top = str(self.geometry().top())
             left = str(self.geometry().left())
@@ -274,7 +273,6 @@ class TableTab(QWidget):
     def __init__(self):
         super().__init__()
 
-        global report
 
         self.table1 = QTableWidget(self)
         self.table1.setBackgroundRole(5)
@@ -363,7 +361,9 @@ class TableTab(QWidget):
 
     def show_dialog(self):
         # проверим выбран ли отчет
-        if isinstance(report, Report):
+        # if isinstance(report, Report):
+        if get_selected("database.db") is not False:
+            report = Report(get_selected("database.db"))
             report.get_digits()
             report.deals_list()
             report.get_grid_list()
@@ -447,21 +447,9 @@ class LotsAnalyse(QWidget):
 
         self.setLayout(layout)
 
-    # def sum_list(self):
-    #     list_os_tables = self.get_mult_report()
-    #     if len(list_os_tables) == 0:
-    #         return 0
-    #     fig = go.Figure()
-    #     for table in list_os_tables:
-    #         y = table['lots'].tolist()
-    #         x = table['date'].tolist()  # '2021.08.09 08:25'
-    #         time_list = [datetime.datetime.strptime(time_str, '%Y.%m.%d %H:%M') for time_str in x]
-    #         fig.add_trace(go.Scatter(x=table[time_list], y=table['lots'], name='qwerty'))
-    #     fig.show()
-
     def pandas_table_for_graph(self):
         # подготавливаем пандас таблицу что бы по ней построить графики лотности
-        global sum_list
+        sum_list = get_all("database.db")
         # если список файлов пустой то ничего не делаем
         if len(sum_list) == 0:
             QMessageBox.question(self, '!!!Внимание!!!', "Добавте файлы\n отчета!!!", QMessageBox.Ok)
@@ -490,6 +478,7 @@ class LotsAnalyse(QWidget):
             plotly.offline.plot(data)
 
 class WorkWithSets(QWidget):
+    # todo если не выбран файл отчета то вылетаем с ошибкой
     def __init__(self):
         super().__init__()
         self.load_set = QPushButton('Загрузить настройки')
@@ -514,9 +503,13 @@ class WorkWithSets(QWidget):
         self.setLayout(vbox)
 
     def load_settings(self):
-        if isinstance(report, Report) is False:
+        # if isinstance(report, Report) is False:
+        #     QMessageBox.question(self, 'Внимание!!!', "Выбирите файл\n отчета!!!", QMessageBox.Ok)
+        #     return 0
+        if get_selected("database.db") is False:
             QMessageBox.question(self, 'Внимание!!!', "Выбирите файл\n отчета!!!", QMessageBox.Ok)
             return 0
+        report = Report(get_selected("database.db"))
         set = report.get_set()
         self.text_edit.setText(set)
 
@@ -584,10 +577,10 @@ class DataBase(QWidget):
 
 if __name__ == "__main__":
 
-    report = 0
-    sum_list = []
-
     confFile = ConfigFile('config\\config.ini')
+
+    path_to_db = "database.db"
+
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
